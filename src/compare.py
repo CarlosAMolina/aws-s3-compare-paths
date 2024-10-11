@@ -32,16 +32,27 @@ def _get_df_combine_files(file_path_names: FilePathNamesToCompare) -> Df:
 
 
 def _get_df_from_file(file_path_names: FilePathNamesToCompare, file_index: int) -> Df:
-    return pd.read_csv(file_path_names[file_index], index_col="name").add_suffix(f'_file_{file_index}')
+    return pd.read_csv(
+        file_path_names[file_index],
+        index_col="name",
+        parse_dates=["date"],
+    ).add_suffix(f'_file_{file_index}')
 
 
 def _show_summary(file_path_names: FilePathNamesToCompare, df: pd.DataFrame):
+    print()
     print(f"Files in {file_path_names[0]} but not in {file_path_names[1]}")
     print(_get_str_summary_lost_files(_get_lost_files(df, 0)))
+    print()
     print(f"Files in {file_path_names[1]} but not in {file_path_names[0]}")
     print(_get_str_summary_lost_files(_get_lost_files(df, 1)))
+    print()
     print("Files with different sizes")
     print(_get_str_summary_sizes_files(_get_files_with_different_size(df)))
+    print()
+    _show_last_file(file_path_names, df, 0)
+    print()
+    _show_last_file(file_path_names, df, 1)
 
 def _get_str_summary_lost_files(files: list[str]) -> str:
     if len(files) == 0:
@@ -63,6 +74,17 @@ def _get_str_summary_sizes_files(files: list[str]) -> str:
 def _get_files_with_different_size(df: Df) -> list[str]:
     condition = (df["size_file_0"].notnull()) & (df["size_file_1"].notnull()) & (df["size_file_0"] != df["size_file_1"])
     return df.loc[condition].index.tolist()
+
+
+def _show_last_file(file_path_names: FilePathNamesToCompare, df: Df, file_index: int):
+    print("Last file in", file_path_names[file_index])
+    column_name = f"date_file_{file_index}"
+    condition = df[column_name] == df[column_name].max()
+    row_file_df = df.loc[condition]
+    file_name = row_file_df.index.values[0]
+    date = row_file_df[column_name].values[0]
+    print(f"{file_name} ({date})")
+
 
 if __name__ == "__main__":
     run()
