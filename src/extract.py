@@ -25,8 +25,8 @@ def _get_s3_query_from_user_input() -> S3Query:
         bucket_name, path_name = user_input[1], user_input[2]
     except IndexError:
         raise ValueError(
-            "Usage: python main.py {bucket} {prefix}"
-            "\nExample: python main.py pets dogs/husky/"
+            "Usage: python extract.py {bucket} {prefix}"
+            "\nExample: python extract.py pets dogs/husky/"
         )
     return S3Query(bucket_name, path_name)
 
