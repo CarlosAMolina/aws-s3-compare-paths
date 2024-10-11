@@ -16,8 +16,7 @@ def run():
     s3_query = _get_s3_query_from_user_input()
     print(f"Working with {s3_query}")
     s3_data = _get_s3_data(s3_query)
-    _export_to_csv(s3_data)
-    print("Extraction done")
+    _export_to_csv(s3_data, s3_query.prefix)
 
 
 def _get_s3_query_from_user_input() -> S3Query:
@@ -48,12 +47,15 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
     ]
 
 
-def _export_to_csv(s3_data: S3Data):
-    with open("output.csv", "w", newline="") as f:
+def _export_to_csv(s3_data: S3Data, s3_path_name: str):
+    file_name = f"{s3_path_name.replace('/','_')}.csv"
+    file_path_name = f"exports/{file_name}"
+    with open(file_path_name, "w", newline="") as f:
         w = csv.DictWriter(f, s3_data[0].keys())
         w.writeheader()
         for file_data in s3_data:
             w.writerow(file_data)
+    print(f"Extraction done: {file_path_name}")
 
 
 if __name__ == "__main__":
