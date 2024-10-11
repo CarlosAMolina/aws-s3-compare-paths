@@ -1,3 +1,4 @@
+import csv
 import logging
 import sys
 from collections import namedtuple
@@ -15,7 +16,7 @@ def run():
     s3_query = _get_s3_query_from_user_input()
     print(f"Working with {s3_query}")
     s3_data = _get_s3_data(s3_query)
-    print(s3_data) # TODO rm
+    _export_to_csv(s3_data)
 
 
 def _get_s3_query_from_user_input() -> S3Query:
@@ -44,6 +45,14 @@ def _get_s3_data(s3_query: S3Query) -> S3FileData:
         )
         for obj in response['Contents']
     ]
+
+
+def _export_to_csv(s3_data: S3Data):
+    with open('output.csv', 'w') as f:
+        w = csv.writer(f)
+        w.writerow(s3_data[0]._fields)    # field header
+        w.writerows([(value for value in getattr(file_data, field_name)) for file_data in s3_data for field_name in file_data._fields])
+
 
 
 if __name__ == "__main__":
