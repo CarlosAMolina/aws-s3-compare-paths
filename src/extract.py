@@ -76,7 +76,9 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
 
 
 def _export_to_csv(s3_data: S3Data, s3_path_name: str):
-    file_name = f"{s3_path_name.replace('/','_')}.csv"
+    file_name = s3_path_name.replace('/','_')
+    file_name = file_name[:-1] if file_name.endswith('_') else file_name
+    file_name = f"{file_name}.csv"
     file_path_name = f"exports/{file_name}"
     with open(file_path_name, "w", newline="") as f:
         w = csv.DictWriter(f, s3_data[0].keys())
