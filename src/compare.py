@@ -49,21 +49,28 @@ def _get_df_from_file(file_path_name: str, environment: str) -> Df:
 
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
-    condition_exists = ( df.loc[:, ("pro", "size")].notnull()
-    ) & (                df.loc[:, ("live", "size")].notnull()
-    ) & (                df.loc[:, ("work", "size")].notnull()
-    )
-    # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
-    df[[("analysis","exists_file_in_all_paths"),]] = False
-    df.loc[condition_exists, [("analysis","exists_file_in_all_paths"),]] = True
-    condition_different_size = (
-          df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(True)
+    condition_pro_copied_wrong = (
+        df.loc[:, ("pro", "size")].notnull()
     ) & (
-        (     df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
-        ) | ( df.loc[:, ("live", "size")] != df.loc[:, ("work", "size")]
+        (
+            df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
+        ) | (
+            df.loc[:, ("live", "size")] != df.loc[:, ("work", "size")]
         )
     )
-    df.loc[condition_different_size, ("analysis", "has_file_same_size_in_all_paths")] = False
+    # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
+    df[[("analysis","is_pro_copied_ok"),]] = None
+    df.loc[condition_pro_copied_wrong, [("analysis","is_pro_copied_ok"),]] = False
+
+    #condition_different_size = (
+    #      df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(True)
+    #) & (
+    #    (     df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
+    #    ) | ( df.loc[:, ("live", "size")] != df.loc[:, ("work", "size")]
+    #    )
+    #)
+    #df.loc[condition_different_size, ("analysis", "has_file_same_size_in_all_paths")] = False
+
     # condition = (
     #     df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(False)
     # ) & (
