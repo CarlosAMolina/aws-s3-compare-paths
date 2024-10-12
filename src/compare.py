@@ -11,9 +11,9 @@ config = {
 
 
 def run():
-    _run_file_name(config["file_name"])
+    _run_file_name()
 
-def _run_file_name(file_name: str):
+def _run_file_name():
     s3_data_df = _get_df_combine_files()
     #_show_summary(s3_data_df, file_path_names)
     s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df)
