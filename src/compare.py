@@ -113,11 +113,6 @@ def _get_str_summary_sizes_files(files: list[str]) -> str:
         return "- All files have same size"
     return _get_str_from_files(files)
 
-def _get_files_with_different_size(df: Df) -> list[str]:
-    condition = (df["size_file_0"].notnull()) & (df["size_file_1"].notnull()) & (df["size_file_0"] != df["size_file_1"])
-    return df.loc[condition].index.tolist()
-
-
 def _show_last_file(file_path_names: FilePathNamesToCompare, df: Df, file_index: int):
     print("Last file in", file_path_names[file_index])
     column_name = f"date"
