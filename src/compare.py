@@ -49,90 +49,27 @@ def _get_df_from_file(file_path_name: str, environment: str) -> Df:
 
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
-    condition_pro_copied_wrong = (
-        df.loc[:, ("pro", "size")].notnull()
-    ) & (
-        (
-            df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
-        ) | (
-            df.loc[:, ("live", "size")] != df.loc[:, ("work", "size")]
-        )
+    condition_pro_copied_wrong_in_live = (
+          df.loc[:, ("pro", "size")].notnull()
+    ) & ( df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
     )
     # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
-    df[[("analysis","is_pro_copied_ok"),]] = None
-    df.loc[condition_pro_copied_wrong, [("analysis","is_pro_copied_ok"),]] = False
-
-    #condition_different_size = (
-    #      df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(True)
-    #) & (
-    #    (     df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
-    #    ) | ( df.loc[:, ("live", "size")] != df.loc[:, ("work", "size")]
-    #    )
-    #)
-    #df.loc[condition_different_size, ("analysis", "has_file_same_size_in_all_paths")] = False
-
-    # condition = (
-    #     df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(False)
-    # ) & (
-    #     df.loc[:, ("work", "size")].notnull()
-    # )
-    # df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[0]
-    # condition = (
-    #     df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(False)
-    # ) & (
-    #     df.loc[:, ("live", "size")].notnull()
-    # )
-    # df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[1]
+    df[[("analysis","is_pro_copied_ok_in_live"),]] = None
+    df.loc[condition_pro_copied_wrong_in_live, [("analysis","is_pro_copied_ok_in_live"),]] = False
+    condition_pro_copied_wrong_in_work = (
+          df.loc[:, ("pro", "size")].notnull()
+    ) & ( df.loc[:, ("pro", "size")] != df.loc[:, ("work", "size")]
+    )
+    df[[("analysis","is_pro_copied_ok_in_work"),]] = None
+    df.loc[condition_pro_copied_wrong_in_work, [("analysis","is_pro_copied_ok_in_work"),]] = False
     return df
-
-
-def _show_summary(df: pd.DataFrame, file_path_names: FilePathNamesToCompare):
-    # TODO work with the result of _get_df_analyze_s3_data
-    print()
-    print(f"Files in {file_path_names[0]} but not in {file_path_names[1]}")
-    print(_get_str_summary_lost_files(_get_lost_files(df, 0)))
-    print()
-    print(f"Files in {file_path_names[1]} but not in {file_path_names[0]}")
-    print(_get_str_summary_lost_files(_get_lost_files(df, 1)))
-    print()
-    print("Files with different sizes")
-    print(_get_str_summary_sizes_files(_get_files_with_different_size(df)))
-    print()
-    _show_last_file(file_path_names, df, 0)
-    print()
-    _show_last_file(file_path_names, df, 1)
-
-def _get_str_summary_lost_files(files: list[str]) -> str:
-    if len(files) == 0:
-        return "- No lost files"
-    return _get_str_from_files(files)
-
-def _get_str_from_files(files: list[str]) -> str:
-    files_with_prefix = [f"- {file}" for file in files]
-    return "\n".join(files_with_prefix)
-
-def _get_lost_files(df: Df, file_index: int) -> list[str]:
-    return df.loc[df[f"date_file_{file_index}"].isnull()].index.tolist()
-
-def _get_str_summary_sizes_files(files: list[str]) -> str:
-    if len(files) == 0:
-        return "- All files have same size"
-    return _get_str_from_files(files)
-
-def _show_last_file(file_path_names: FilePathNamesToCompare, df: Df, file_index: int):
-    print("Last file in", file_path_names[file_index])
-    column_name = f"date"
-    condition = df[column_name] == df[column_name].max()
-    row_file_df = df.loc[condition]
-    file_name = row_file_df.index.values[0]
-    date = row_file_df[column_name].values[0]
-    print(f"{file_name} ({date})")
 
 def _export_to_csv(df: Df):
     to_csv_df = df.copy()
     to_csv_df.columns = ["_".join(pair) for pair in to_csv_df.columns]
     print(to_csv_df)
     to_csv_df.to_csv('/tmp/foo.csv')
+
 
 if __name__ == "__main__":
     run()
