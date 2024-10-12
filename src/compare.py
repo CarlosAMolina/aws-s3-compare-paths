@@ -50,12 +50,9 @@ def _get_df_from_file(file_path_name: str, environment: str) -> Df:
 
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
-    condition_exists = (
-        df.loc[:, ("work", "size")].notnull()
-    ) & (
-        df.loc[:, ("live", "size")].notnull()
-    ) & (
-        df.loc[:, ("pro", "size")].notnull()
+    condition_exists = ( df.loc[:, (config["folder_names_with_files"][0], "size")].notnull()
+    ) & (                df.loc[:, (config["folder_names_with_files"][1], "size")].notnull()
+    ) & (                df.loc[:, (config["folder_names_with_files"][2], "size")].notnull()
     )
     # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
     df[[("analysis","exists_file_in_all_paths"),]] = False
