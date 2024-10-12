@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 def run():
-    s3_query = _get_s3_query_from_user_input()
+    s3_queries = [_get_s3_query_from_user_input()]
+    for s3_query in s3_queries:
+        _run_s3_path_files_to_csv(s3_query)
+
+def _run_s3_path_files_to_csv(s3_query):
     print(f"Working with {s3_query}")
     s3_data = _get_s3_data(s3_query)
     _export_to_csv(s3_data, s3_query.prefix)
