@@ -1,0 +1,3 @@
+folder-1/subfolder-1
+folder-1/subfolder-2
+folder-2/subfolder-1/subfolder-2

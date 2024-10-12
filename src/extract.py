@@ -13,9 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 def run():
-    s3_queries = [_get_s3_query_from_user_input()]
-    for s3_query in s3_queries:
+    for s3_query in _get_s3_queries():
         _run_s3_path_files_to_csv(s3_query)
+
+
+def _get_s3_queries() -> list[S3Query]:
+    error_text = "The first argumen must ve i or f.\nUsage: python extract.py [i|f]"
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "i":
+            return [_get_s3_query_from_user_input()]
+        if sys.argv[1] == "f":
+            return _get_s3_queries_from_file()
+    raise ValueError(error_text)
+
 
 def _run_s3_path_files_to_csv(s3_query):
     print(f"Working with {s3_query}")
@@ -26,13 +36,27 @@ def _run_s3_path_files_to_csv(s3_query):
 def _get_s3_query_from_user_input() -> S3Query:
     user_input = sys.argv
     try:
-        bucket_name, path_name = user_input[1], user_input[2]
+        bucket_name, path_name = user_input[2], user_input[3]
     except IndexError:
         raise ValueError(
-            "Usage: python extract.py {bucket} {prefix}"
-            "\nExample: python extract.py pets dogs/husky/"
+            "Usage: python extract.py i {bucket} {prefix}"
+            "\nExample: python extract.py i pets dogs/husky/"
         )
     return S3Query(bucket_name, path_name)
+
+def _get_s3_queries_from_file() -> list[S3Query]:
+    user_input = sys.argv
+    file_path_name_with_paths_to_analyze = "files-with-paths/paths-to-analyze.txt"
+    try:
+        bucket_name = user_input[2]
+    except IndexError:
+        raise ValueError(
+            "Usage: python extract.py f {bucket_name}"
+            "\nExample: python extract.py f pets"
+        )
+    with open(file_path_name_with_paths_to_analyze, "r") as f:
+        file_path_names = f.read().splitlines()
+    return [S3Query(bucket_name, file_path_name) for file_path_name in file_path_names]
 
 
 def _get_s3_data(s3_query: S3Query) -> S3Data:
