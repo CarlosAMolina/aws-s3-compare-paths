@@ -1,2 +1,3 @@
 __pycache__
 src/exports/*.csv
+src/files-with-paths/paths-to-analyze.txt
