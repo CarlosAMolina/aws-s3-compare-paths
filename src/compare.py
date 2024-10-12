@@ -70,11 +70,9 @@ def _get_df_analyze_s3_data(df: Df) -> Df:
     # )
     # df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[1]
     condition = (
-        df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(True)
-    ) & (
-        df.loc[:, (config["folder_names_with_files"][0], "size")] == df.loc[:, (config["folder_names_with_files"][1], "size")]
-    ) & (
-        df.loc[:, (config["folder_names_with_files"][1], "size")] == df.loc[:, (config["folder_names_with_files"][2], "size")]
+          df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(True)
+    ) & ( df.loc[:, (config["folder_names_with_files"][0], "size")] == df.loc[:, (config["folder_names_with_files"][1], "size")]
+    ) & ( df.loc[:, (config["folder_names_with_files"][1], "size")] == df.loc[:, (config["folder_names_with_files"][2], "size")]
     )
     df.loc[condition, ("analysis", "has_file_same_size_in_all_paths")] = False
     df.loc[condition, ("analysis", "has_file_same_size_in_all_paths")] = True
