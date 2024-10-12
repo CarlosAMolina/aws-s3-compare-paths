@@ -13,6 +13,9 @@ config = {
 
 def run():
     file_name = _get_s3_file_name_from_user_input()
+    _run_file_name(file_name)
+
+def _run_file_name(file_name: str):
     file_path_names = tuple(f"exports/{folder_name}/{file_name}" for folder_name in config["folder_names_with_files"])
     print(f"Start comparing: {' ,'.join(file_path_names)}")
     s3_data_df = _get_df_combine_files(file_path_names)
@@ -34,11 +37,10 @@ def _get_s3_file_name_from_user_input() -> str:
 
 
 def _get_df_combine_files(file_path_names: FilePathNamesToCompare) -> Df:
-    file_1_df = _get_df_from_file(file_path_names[0], "work")
-    file_2_df = _get_df_from_file(file_path_names[1], "live")
-    file_3_df = _get_df_from_file(file_path_names[2], "pro")
-    result = file_1_df.join(file_2_df, how='outer')
-    result = result.join(file_3_df, how='outer')
+    file_1_df = _get_df_from_file(file_path_names[0], config["folder_names_with_files"][0])
+    file_2_df = _get_df_from_file(file_path_names[1], config["folder_names_with_files"][1])
+    file_3_df = _get_df_from_file(file_path_names[2], config["folder_names_with_files"][2])
+    result = file_1_df.join(file_2_df, how='outer').join(file_3_df, how='outer')
     result.columns = pd.MultiIndex.from_tuples(_get_column_names_multindex(result))
     return result
 
