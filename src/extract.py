@@ -18,7 +18,7 @@ def run():
 
 
 def _get_s3_queries() -> list[S3Query]:
-    error_text = "The first argumen must ve i or f.\nUsage: python extract.py [i|f]"
+    error_text = "The first argumen must be i or f.\nUsage: python extract.py [i|f]"
     if len(sys.argv) > 1:
         if sys.argv[1] == "i":
             return [_get_s3_query_from_user_input()]
@@ -67,12 +67,16 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
         raise ValueError("I can't manage all the files")
     return [
             {
-                "name": content["Key"].split("/")[-1],
+                "name": _get_file_name_from_response_key(content),
                 "date": content["LastModified"],
                 "size": content["Size"],
             }
         for content in response['Contents']
+        if len(_get_file_name_from_response_key(content)) > 0 and content["Size"] > 0
     ]
+
+def _get_file_name_from_response_key(content: dict) -> str:
+    return content["Key"].split("/")[-1]
 
 
 def _export_to_csv(s3_data: S3Data, s3_path_name: str):
