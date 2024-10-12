@@ -1,5 +1,3 @@
-import sys
-
 import pandas as pd
 from pandas import DataFrame as Df
 
@@ -20,7 +18,7 @@ def _run_file_name(file_name: str):
     print(f"Start comparing: {', '.join(file_path_names)}")
     s3_data_df = _get_df_combine_files(file_path_names)
     #_show_summary(s3_data_df, file_path_names)
-    s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df, file_path_names)
+    s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df)
     print(s3_analyzed_df)
     s3_analyzed_df.to_csv('/tmp/foo.csv')
 
@@ -52,7 +50,7 @@ def _get_df_from_file(file_path_name: str, environment: str) -> Df:
     ).add_suffix(f"_{environment}")
 
 
-def _get_df_analyze_s3_data(df: Df, file_path_names: FilePathNamesToCompare) -> Df:
+def _get_df_analyze_s3_data(df: Df) -> Df:
     condition_exists = (
         df.loc[:, ("work", "size")].notnull()
     ) & (
