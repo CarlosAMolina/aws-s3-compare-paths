@@ -11,7 +11,9 @@ def run():
     file_path_names = _get_s3_file_name_paths_from_user_input()
     print(f"Start comparing {' and '.join(file_path_names)}")
     s3_data_df = _get_df_combine_files(file_path_names)
-    _show_summary(file_path_names, s3_data_df)
+    _show_summary(s3_data_df, file_path_names)
+    s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df, file_path_names)
+    print(s3_analyzed_df)
 
 
 def _get_s3_file_name_paths_from_user_input() -> FilePathNamesToCompare:
@@ -39,7 +41,23 @@ def _get_df_from_file(file_path_names: FilePathNamesToCompare, file_index: int) 
     ).add_suffix(f'_file_{file_index}')
 
 
-def _show_summary(file_path_names: FilePathNamesToCompare, df: pd.DataFrame):
+def _get_df_analyze_s3_data(df: Df, file_path_names: FilePathNamesToCompare) -> Df:
+    condition_exists = (df["size_file_0"].notnull()) & (df["size_file_1"].notnull())
+    df["exists_file_in_both_paths"] = condition_exists
+    df.loc[
+        (df["exists_file_in_both_paths"].eq(False)) & (df["size_file_0"].notnull()),
+        "unique_path_where_the_file_exists",
+    ] = file_path_names[0]
+    df.loc[
+        (df["exists_file_in_both_paths"].eq(False)) & (df["size_file_1"].notnull()),
+        "unique_path_where_the_file_exists",
+    ] = file_path_names[1]
+    df["has_file_same_size_in_both_paths"] = (df["exists_file_in_both_paths"].eq(True)) & (df["size_file_0"] == df["size_file_1"])
+    return df
+
+
+def _show_summary(df: pd.DataFrame, file_path_names: FilePathNamesToCompare):
+    # TODO work with the result of _get_df_analyze_s3_data
     print()
     print(f"Files in {file_path_names[0]} but not in {file_path_names[1]}")
     print(_get_str_summary_lost_files(_get_lost_files(df, 0)))
