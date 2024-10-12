@@ -7,33 +7,22 @@ from pandas import DataFrame as Df
 FilePathNamesToCompare = tuple[str, str, str]
 
 config = {
-    "folder_names_with_files": ["work", "live", "pro"]
+    "file_name": "file.csv", 
+    "folder_names_with_files": ["work", "live", "pro"],
 }
 
 
 def run():
-    file_name = _get_s3_file_name_from_user_input()
-    _run_file_name(file_name)
+    _run_file_name(config["file_name"])
 
 def _run_file_name(file_name: str):
     file_path_names = tuple(f"exports/{folder_name}/{file_name}" for folder_name in config["folder_names_with_files"])
-    print(f"Start comparing: {' ,'.join(file_path_names)}")
+    print(f"Start comparing: {', '.join(file_path_names)}")
     s3_data_df = _get_df_combine_files(file_path_names)
     #_show_summary(s3_data_df, file_path_names)
     s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df, file_path_names)
     print(s3_analyzed_df)
     s3_analyzed_df.to_csv('/tmp/foo.csv')
-
-
-def _get_s3_file_name_from_user_input() -> str:
-    user_input = sys.argv
-    try:
-        return user_input[1]
-    except IndexError:
-        raise ValueError(
-            "Usage: python compare.py {file_name}"
-            "\nExample: python compare.py file.csv"
-        )
 
 
 def _get_df_combine_files(file_path_names: FilePathNamesToCompare) -> Df:
