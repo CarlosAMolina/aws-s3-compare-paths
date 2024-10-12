@@ -6,7 +6,7 @@ FilePathNamesToCompare = tuple[str, str, str]
 
 config = {
     "file_name": "file.csv", 
-    "folder_names_with_files": ["work", "live", "pro"],
+    "folder_names_with_files": ["pro", "live", "work"],
 }
 
 
@@ -17,8 +17,7 @@ def _run_file_name():
     s3_data_df = _get_df_combine_files()
     #_show_summary(s3_data_df, file_path_names)
     s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df)
-    print(s3_analyzed_df)
-    s3_analyzed_df.to_csv('/tmp/foo.csv')
+    _export_to_csv(s3_analyzed_df)
 
 
 def _get_df_combine_files() -> Df:
@@ -122,6 +121,11 @@ def _show_last_file(file_path_names: FilePathNamesToCompare, df: Df, file_index:
     date = row_file_df[column_name].values[0]
     print(f"{file_name} ({date})")
 
+def _export_to_csv(df: Df):
+    to_csv_df = df.copy()
+    to_csv_df.columns = ["_".join(pair) for pair in to_csv_df.columns]
+    print(to_csv_df)
+    to_csv_df.to_csv('/tmp/foo.csv')
 
 if __name__ == "__main__":
     run()
