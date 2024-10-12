@@ -46,7 +46,7 @@ def _get_s3_query_from_user_input() -> S3Query:
 
 def _get_s3_queries_from_file() -> list[S3Query]:
     user_input = sys.argv
-    file_path_name_with_paths_to_analyze = "files-with-paths/paths-to-analyze.txt"
+    file_name_paths_to_analyze = "paths-to-analyze.txt"
     try:
         bucket_name = user_input[2]
     except IndexError:
@@ -54,7 +54,7 @@ def _get_s3_queries_from_file() -> list[S3Query]:
             "Usage: python extract.py f {bucket_name}"
             "\nExample: python extract.py f pets"
         )
-    with open(file_path_name_with_paths_to_analyze, "r") as f:
+    with open(file_name_paths_to_analyze, "r") as f:
         file_path_names = f.read().splitlines()
     return [S3Query(bucket_name, file_path_name) for file_path_name in file_path_names]
 
