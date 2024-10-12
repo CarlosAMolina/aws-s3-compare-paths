@@ -4,16 +4,22 @@ import pandas as pd
 from pandas import DataFrame as Df
 
 
-FilePathNamesToCompare = tuple[str, str]
+FilePathNamesToCompare = tuple[str, str, str]
 
 
 def run():
-    file_path_names = _get_s3_file_name_paths_from_user_input()
-    print(f"Start comparing {' and '.join(file_path_names)}")
+    # file_path_names = _get_s3_file_name_paths_from_user_input()
+    file_path_names = (
+        "exports/work/file.csv",
+        "exports/live/file.csv",
+        "exports/pro/file.csv",
+    )
+    print(f"Start comparing: {' ,'.join(file_path_names)}")
     s3_data_df = _get_df_combine_files(file_path_names)
     #_show_summary(s3_data_df, file_path_names)
     s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df, file_path_names)
     print(s3_analyzed_df)
+    s3_analyzed_df.to_csv('/tmp/foo.csv')
 
 
 def _get_s3_file_name_paths_from_user_input() -> FilePathNamesToCompare:
@@ -28,9 +34,11 @@ def _get_s3_file_name_paths_from_user_input() -> FilePathNamesToCompare:
 
 
 def _get_df_combine_files(file_path_names: FilePathNamesToCompare) -> Df:
-    file_1_df = _get_df_from_file(file_path_names, 0)
-    file_2_df = _get_df_from_file(file_path_names, 1)
+    file_1_df = _get_df_from_file(file_path_names[0], "work")
+    file_2_df = _get_df_from_file(file_path_names[1], "live")
+    file_3_df = _get_df_from_file(file_path_names[2], "pro")
     result = file_1_df.join(file_2_df, how='outer')
+    result = result.join(file_3_df, how='outer')
     result.columns = pd.MultiIndex.from_tuples(_get_column_names_multindex(result))
     return result
 
@@ -41,48 +49,50 @@ def _get_column_names_multindex(column_names: list[str]) -> list[tuple[str, str]
     ]
 
 def _get_tuple_column_names_multindex(column_name: str) -> tuple[str, str]:
-    column_name_clean = column_name.replace("_file","")
-    indexes = column_name_clean.split("_")
+    indexes = column_name.split("_")
     return indexes[1], indexes[0]
 
 
-def _get_df_from_file(file_path_names: FilePathNamesToCompare, file_index: int) -> Df:
+def _get_df_from_file(file_path_name: str, environment: str) -> Df:
     return pd.read_csv(
-        file_path_names[file_index],
+        file_path_name,
         index_col="name",
         parse_dates=["date"],
-    ).add_suffix(f'_file_{file_index}')
+    ).add_suffix(f"_{environment}")
 
 
 def _get_df_analyze_s3_data(df: Df, file_path_names: FilePathNamesToCompare) -> Df:
     condition_exists = (
-        df.loc[:, ("0", "size")].notnull()
+        df.loc[:, ("work", "size")].notnull()
     ) & (
-        df.loc[:, ("1", "size")].notnull()
+        df.loc[:, ("live", "size")].notnull()
+    ) & (
+        df.loc[:, ("pro", "size")].notnull()
     )
     # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
-    df[[("analysis","exists_file_in_both_paths"),]] = False
-    df.loc[condition_exists, [("analysis","exists_file_in_both_paths"),]] = True
+    df[[("analysis","exists_file_in_all_paths"),]] = False
+    df.loc[condition_exists, [("analysis","exists_file_in_all_paths"),]] = True
+    # condition = (
+    #     df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(False)
+    # ) & (
+    #     df.loc[:, ("work", "size")].notnull()
+    # )
+    # df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[0]
+    # condition = (
+    #     df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(False)
+    # ) & (
+    #     df.loc[:, ("live", "size")].notnull()
+    # )
+    # df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[1]
     condition = (
-        df.loc[:, ("analysis", "exists_file_in_both_paths")].eq(False)
+        df.loc[:, ("analysis", "exists_file_in_all_paths")].eq(True)
     ) & (
-        df.loc[:, ("0", "size")].notnull()
-    )
-    df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[0]
-    condition = (
-        df.loc[:, ("analysis", "exists_file_in_both_paths")].eq(False)
+        df.loc[:, ("work", "size")] == df.loc[:, ("live", "size")]
     ) & (
-        df.loc[:, ("1", "size")].notnull()
+        df.loc[:, ("live", "size")] == df.loc[:, ("pro", "size")]
     )
-    df.loc[condition, "unique_path_where_the_file_exists"] = file_path_names[1]
-
-    condition = (
-        df.loc[:, ("analysis", "exists_file_in_both_paths")].eq(True)
-    ) & (
-        df.loc[:, ("0", "size")] == df.loc[:, ("0", "size")]
-    )
-    df.loc[condition, "has_file_same_size_in_both_paths"] = False
-    df.loc[condition, "has_file_same_size_in_both_paths"] = True
+    df.loc[condition, ("analysis", "has_file_same_size_in_all_paths")] = False
+    df.loc[condition, ("analysis", "has_file_same_size_in_all_paths")] = True
     return df
 
 
@@ -126,7 +136,7 @@ def _get_files_with_different_size(df: Df) -> list[str]:
 
 def _show_last_file(file_path_names: FilePathNamesToCompare, df: Df, file_index: int):
     print("Last file in", file_path_names[file_index])
-    column_name = f"date_file_{file_index}"
+    column_name = f"date"
     condition = df[column_name] == df[column_name].max()
     row_file_df = df.loc[condition]
     file_name = row_file_df.index.values[0]
