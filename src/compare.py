@@ -74,7 +74,9 @@ def _get_buckets_and_exported_files() -> dict[str, list[str]]:
 
 
 def _get_aws_accounts() -> list[str]:
-    return os.listdir(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS)
+    result = os.listdir(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS)
+    result.sort()
+    return result
 
 
 def _get_df_from_file(file_path_name: PurePath) -> Df:
