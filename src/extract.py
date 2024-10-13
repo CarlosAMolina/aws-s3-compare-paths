@@ -38,15 +38,20 @@ def _get_s3_queries() -> list[S3Query]:
 def _get_s3_data(s3_query: S3Query) -> S3Data:
     session = boto3.Session()
     s3_client = session.client('s3')
-    response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=s3_query.prefix)
+    # https://stackoverflow.com/questions/71577584/python-boto3-s3-list-only-current-directory-file-ignoring-subdirectory-files
+    response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=s3_query.prefix+"/", Delimiter="/")
+    if len(response["CommonPrefixes"]) > 0:
+        folder_path_names = [
+            common_prefix["Prefix"]
+            for common_prefix in response["CommonPrefixes"]
+        ]
+        error_text = (
+            f"Subfolders detected in bucket {s3_query.bucket}. This script cannot manage subfolders"
+            f". Subfolders ({len(folder_path_names)}): {', '.join(folder_path_names)}")
+        raise ValueError(error_text)
     if response["IsTruncated"] is True:
         folder_path = PurePath(s3_query.bucket, s3_query.prefix)
         raise ValueError(f"More files that the maximum allowed in {folder_path}. This script cannot manage all the files")
-    for content in response['Contents']:
-        # TODO bug: empty files are detected as folders.
-        if content["Size"] == 0:
-            folder_path = PurePath(s3_query.bucket, content["Key"])
-            raise ValueError(f"Subfolder detected {folder_path}. This script cannot manage subfolders")
     return [
             {
                 "name": _get_file_name_from_response_key(content),
