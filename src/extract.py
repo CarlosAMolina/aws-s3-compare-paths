@@ -7,14 +7,8 @@ from pathlib import PurePath
 
 import boto3
 
+from config import export_config as config
 
-config = {
-    "bucket": "pets",
-    "paths": [
-        "dogs/big/",
-        "cats/europe/",
-    ]
-}
 
 S3Query = namedtuple("S3Query", "bucket prefix")
 S3FileData = dict
