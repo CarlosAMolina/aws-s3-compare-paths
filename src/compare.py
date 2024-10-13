@@ -19,6 +19,7 @@ def run():
 def _run_file_name():
     s3_data_df = _get_df_combine_files()
     s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df)
+    _show_summary(s3_analyzed_df)
     _export_to_csv(s3_analyzed_df)
 
 
@@ -99,31 +100,37 @@ def _get_tuple_index_multi_index(index: str) -> tuple[str, str, str]:
     return bucket_name, path_name, file_name
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
-    aws_account_to_compare = "aws_account_2_live"
-    condition_copied_wrong_in_account_2 = (
-          df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")].notnull()
-    ) & ( df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")] != df.loc[:, (aws_account_to_compare, "size")]
-    )
-    # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
-    column_name_compare_result = f"is_{AWS_ACCOUNT_WITH_DATA_TO_SYNC}_copied_ok_in_{aws_account_to_compare}"
-    df[[("analysis",column_name_compare_result),]] = None
-    df.loc[condition_copied_wrong_in_account_2, [("analysis",column_name_compare_result),]] = False
-    aws_account_to_compare = "aws_account_3_work"
-    column_name_compare_result = f"is_{AWS_ACCOUNT_WITH_DATA_TO_SYNC}_copied_ok_in_{aws_account_to_compare}"
-    condition_copied_wrong_in_account_3 = (
-          df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")].notnull()
-    ) & ( df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")] != df.loc[:, (aws_account_to_compare, "size")]
-    )
-    df[[("analysis",column_name_compare_result),]] = None
-    df.loc[condition_copied_wrong_in_account_3 , [("analysis",column_name_compare_result),]] = False
+    for aws_account_to_compare in _get_accounts_where_files_must_be_copied():
+        condition_copied_wrong_in_account = (
+              df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")].notnull()
+        ) & ( df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")] != df.loc[:, (aws_account_to_compare, "size")]
+        )
+        # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
+        column_name_compare_result = f"is_{AWS_ACCOUNT_WITH_DATA_TO_SYNC}_copied_ok_in_{aws_account_to_compare}"
+        df[[("analysis",column_name_compare_result),]] = None
+        df.loc[condition_copied_wrong_in_account, [("analysis",column_name_compare_result),]] = False
     return df
+
+def _get_accounts_where_files_must_be_copied() -> list [str]:
+    result = get_aws_accounts()
+    result.remove(AWS_ACCOUNT_WITH_DATA_TO_SYNC)
+    return result
+
+def _show_summary(df: Df):
+    for aws_account_to_compare in _get_accounts_where_files_must_be_copied():
+        column_name_compare_result = f"is_{AWS_ACCOUNT_WITH_DATA_TO_SYNC}_copied_ok_in_{aws_account_to_compare}"
+        condition = (
+          (     df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")].notnull() 
+          ) & ( df.loc[:, ("analysis", column_name_compare_result)].eq(False) )
+        )
+        result = df[condition]
+        print(f"Files not copied in {aws_account_to_compare} ({len(result)}):")
+        print(result)
 
 def _export_to_csv(df: Df):
     to_csv_df = df.copy()
     to_csv_df.columns = ["_".join(values) for values in to_csv_df.columns]
-    to_csv_df.index= ["_".join(values) for values in to_csv_df.index]
-    print(to_csv_df)
-    to_csv_df.to_csv('/tmp/foo.csv')
+    to_csv_df.to_csv('/tmp/analysis.csv')
 
 
 if __name__ == "__main__":
