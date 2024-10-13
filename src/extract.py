@@ -8,13 +8,12 @@ from pathlib import PurePath
 import boto3
 
 from config import export_config as config
+from constants import MAIN_FOLDER_NAME_EXPORTS
 
 
 S3Query = namedtuple("S3Query", "bucket prefix")
 S3FileData = dict
 S3Data = list[S3FileData]
-
-MAIN_FOLDER_NAME_EXPORTS = "exports"
 
 
 logger = logging.getLogger(__name__)

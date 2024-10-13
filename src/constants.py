@@ -1,0 +1,1 @@
+MAIN_FOLDER_NAME_EXPORTS = "exports"
