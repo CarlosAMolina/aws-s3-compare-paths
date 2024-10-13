@@ -7,6 +7,7 @@ from pandas import DataFrame as Df
 
 from config import AWS_ACCOUNT_WITH_DATA_TO_SYNC
 from constants import MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS
+from utils import get_aws_accounts
 
 
 FilePathNamesToCompare = tuple[str, str, str]
@@ -17,7 +18,6 @@ def run():
 
 def _run_file_name():
     s3_data_df = _get_df_combine_files()
-    #_show_summary(s3_data_df, file_path_names)
     s3_analyzed_df = _get_df_analyze_s3_data(s3_data_df)
     _export_to_csv(s3_analyzed_df)
 
@@ -25,16 +25,11 @@ def _run_file_name():
 def _get_df_combine_files() -> Df:
     result = Df()
     buckets_and_files: dict = _get_buckets_and_exported_files()
-    for aws_account in _get_aws_accounts():
+    for aws_account in get_aws_accounts():
         account_df = _get_df_combine_files_for_aws_account(aws_account, buckets_and_files)
         result = result.join(account_df, how='outer')
-    print(result)
-    result.to_csv('/tmp/no_multi.csv')
     result.columns = pd.MultiIndex.from_tuples(_get_column_names_mult_index(result.columns))
     result.index = pd.MultiIndex.from_tuples(_get_index_multi_index(result.index))
-    result.to_csv('/tmp/multi.csv')
-    print(result)
-    breakpoint()
     return result
 
 def _get_df_combine_files_for_aws_account(aws_account: str, buckets_and_files: dict) -> Df:
@@ -52,7 +47,7 @@ def _get_df_combine_files_for_aws_account(aws_account: str, buckets_and_files: d
 def _get_buckets_and_exported_files() -> dict[str, list[str]]:
     bucket_names = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, AWS_ACCOUNT_WITH_DATA_TO_SYNC))
     bucket_names.sort()
-    accounts = _get_aws_accounts()
+    accounts = get_aws_accounts()
     accounts.remove(AWS_ACCOUNT_WITH_DATA_TO_SYNC)
     accounts.sort()
     for account in accounts:
@@ -70,12 +65,6 @@ def _get_buckets_and_exported_files() -> dict[str, list[str]]:
             if file_names != files_for_bucket_in_account:
                 raise ValueError(f"The S3 data has not been exported correctly. Error comparing files in account '{account}' and bucket '{bucket}'")
         result[bucket] = file_names
-    return result
-
-
-def _get_aws_accounts() -> list[str]:
-    result = os.listdir(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS)
-    result.sort()
     return result
 
 
@@ -110,24 +99,29 @@ def _get_tuple_index_multi_index(index: str) -> tuple[str, str, str]:
     return bucket_name, path_name, file_name
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
-    condition_pro_copied_wrong_in_live = (
-          df.loc[:, ("pro", "size")].notnull()
-    ) & ( df.loc[:, ("pro", "size")] != df.loc[:, ("live", "size")]
+    aws_account_to_compare = "aws_account_2_live"
+    condition_copied_wrong_in_account_2 = (
+          df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")].notnull()
+    ) & ( df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")] != df.loc[:, (aws_account_to_compare, "size")]
     )
     # https://stackoverflow.com/questions/18470323/selecting-columns-from-pandas-multiindex
-    df[[("analysis","is_pro_copied_ok_in_live"),]] = None
-    df.loc[condition_pro_copied_wrong_in_live, [("analysis","is_pro_copied_ok_in_live"),]] = False
-    condition_pro_copied_wrong_in_work = (
-          df.loc[:, ("pro", "size")].notnull()
-    ) & ( df.loc[:, ("pro", "size")] != df.loc[:, ("work", "size")]
+    column_name_compare_result = f"is_{AWS_ACCOUNT_WITH_DATA_TO_SYNC}_copied_ok_in_{aws_account_to_compare}"
+    df[[("analysis",column_name_compare_result),]] = None
+    df.loc[condition_copied_wrong_in_account_2, [("analysis",column_name_compare_result),]] = False
+    aws_account_to_compare = "aws_account_3_work"
+    column_name_compare_result = f"is_{AWS_ACCOUNT_WITH_DATA_TO_SYNC}_copied_ok_in_{aws_account_to_compare}"
+    condition_copied_wrong_in_account_3 = (
+          df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")].notnull()
+    ) & ( df.loc[:, (AWS_ACCOUNT_WITH_DATA_TO_SYNC, "size")] != df.loc[:, (aws_account_to_compare, "size")]
     )
-    df[[("analysis","is_pro_copied_ok_in_work"),]] = None
-    df.loc[condition_pro_copied_wrong_in_work, [("analysis","is_pro_copied_ok_in_work"),]] = False
+    df[[("analysis",column_name_compare_result),]] = None
+    df.loc[condition_copied_wrong_in_account_3 , [("analysis",column_name_compare_result),]] = False
     return df
 
 def _export_to_csv(df: Df):
     to_csv_df = df.copy()
-    to_csv_df.columns = ["_".join(pair) for pair in to_csv_df.columns]
+    to_csv_df.columns = ["_".join(values) for values in to_csv_df.columns]
+    to_csv_df.index= ["_".join(values) for values in to_csv_df.index]
     print(to_csv_df)
     to_csv_df.to_csv('/tmp/foo.csv')
 
