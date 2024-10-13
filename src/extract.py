@@ -14,16 +14,25 @@ S3Query = namedtuple("S3Query", "bucket prefix")
 S3FileData = dict
 S3Data = list[S3FileData]
 
+MAIN_FOLDER_NAME_EXPORTS = "exports"
+
 
 logger = logging.getLogger(__name__)
 
 
 def run():
+    if os.path.isdir(MAIN_FOLDER_NAME_EXPORTS):
+        raise FileExistsError(f"The folder '{MAIN_FOLDER_NAME_EXPORTS}' exists, drop it before continue")
+    exported_files_directory_path = PurePath(MAIN_FOLDER_NAME_EXPORTS, config["bucket"])
+    print("Creating folder", exported_files_directory_path)
+    os.makedirs(exported_files_directory_path)
     s3_queries = _get_s3_queries()
     for query_index, s3_query in enumerate(s3_queries, 1):
         print(f"Working with query {query_index}/{len(s3_queries)}: {s3_query}")
         s3_data = _get_s3_data(s3_query)
-        _export_to_csv(s3_data, s3_query)
+        file_path = _get_results_exported_file_path(exported_files_directory_path, s3_query.prefix)
+        _export_data_to_csv(s3_data, file_path)
+        print(f"Extraction done")
 
 
 def _get_s3_queries() -> list[S3Query]:
@@ -75,28 +84,14 @@ def _get_file_name_from_response_key(content: dict) -> str:
     return content["Key"].split("/")[-1]
 
 
-def _export_to_csv(s3_data: S3Data, s3_query: S3Query):
-    bucket_path= _get_folder_path_for_bucket_export(s3_query.bucket)
-    _create_folder_if_not_exists(bucket_path)
-    file_path = _get_file_path(bucket_path, s3_query.prefix)
-    _export_data_to_csv(s3_data, file_path)
-    print(f"Extraction done")
-
-def _create_folder_if_not_exists(path: PurePath):
-    if not os.path.isdir(path):
-        print("Creating folder", path)
-        os.makedirs(path)
-
-
-def _get_folder_path_for_bucket_export(bucket: str) -> PurePath:
-    return PurePath("exports", bucket)
-
-
-def _get_file_path(bucket_path: PurePath, s3_path_name: str) -> PurePath:
+def _get_results_exported_file_path(
+        exported_files_directory_path: PurePath,
+        s3_path_name: str,
+    ) -> PurePath:
     s3_path_name_clean = s3_path_name[:-1] if s3_path_name.endswith('/') else s3_path_name
-    file_name = s3_path_name_clean.replace('/','-')
-    file_name = f"{file_name}.csv"
-    return bucket_path.joinpath(file_name)
+    exported_file_name = s3_path_name_clean.replace('/','-')
+    exported_file_name = f"{exported_file_name}.csv"
+    return exported_files_directory_path.joinpath(exported_file_name)
 
 
 def _export_data_to_csv(s3_data: S3Data, file_path: PurePath):
