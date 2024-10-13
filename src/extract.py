@@ -40,7 +40,13 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
     s3_client = session.client('s3')
     response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=s3_query.prefix)
     if response["IsTruncated"] is True:
-        raise ValueError("I can't manage all the files")
+        folder_path = PurePath(s3_query.bucket, s3_query.prefix)
+        raise ValueError(f"More files that the maximum allowed in {folder_path}. This script cannot manage all the files")
+    for content in response['Contents']:
+        # TODO bug: empty files are detected as folders.
+        if content["Size"] == 0:
+            folder_path = PurePath(s3_query.bucket, content["Key"])
+            raise ValueError(f"Subfolder detected {folder_path}. This script cannot manage subfolders")
     return [
             {
                 "name": _get_file_name_from_response_key(content),
@@ -48,7 +54,6 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
                 "size": content["Size"],
             }
         for content in response['Contents']
-        if len(_get_file_name_from_response_key(content)) > 0 and content["Size"] > 0
     ]
 
 def _get_file_name_from_response_key(content: dict) -> str:
