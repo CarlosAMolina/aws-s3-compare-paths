@@ -1,5 +1,11 @@
+from pathlib import PurePath
+import os
+
 import pandas as pd
 from pandas import DataFrame as Df
+
+
+from constants import MAIN_FOLDER_NAME_EXPORTS
 
 
 FilePathNamesToCompare = tuple[str, str, str]
@@ -22,12 +28,31 @@ def _run_file_name():
 
 def _get_df_combine_files() -> Df:
     result = pd.DataFrame()
-    for folder_name in config["folder_names_with_files"]:
-        file_path_name = f"exports/{folder_name}/{config['file_name']}"
-        file_df = _get_df_from_file(file_path_name, folder_name)
-        result = result.join(file_df, how='outer')
+    buckets_and_exported_files = _get_buckets_and_exported_files()
+    for bucket_name, file_names in buckets_and_exported_files.items():
+        for file_name in file_names:
+            file_path_name = f"exports/{bucket_name}/{file_name}"
+            file_df = _get_df_from_file(file_path_name, folder_name)
+            result = result.join(file_df, how='outer')
     result.columns = pd.MultiIndex.from_tuples(_get_column_names_multindex(result))
     return result
+
+def _get_buckets_and_exported_files() -> dict[str, list[str]]:
+    bucket_names = os.listdir(MAIN_FOLDER_NAME_EXPORTS)
+    result = {}
+    for bucket_name in bucket_names:
+        directory_path = PurePath(MAIN_FOLDER_NAME_EXPORTS, bucket_name) 
+        file_names = os.listdir(directory_path)
+        result[bucket_name] = file_names
+    return result
+
+def _get_df_from_file(file_path_name: str, environment: str) -> Df:
+    return pd.read_csv(
+        file_path_name,
+        index_col="name",
+        parse_dates=["date"],
+    ).add_suffix(f"_{environment}")
+
 
 def _get_column_names_multindex(column_names: list[str]) -> list[tuple[str, str]]:
     return [
@@ -38,15 +63,6 @@ def _get_column_names_multindex(column_names: list[str]) -> list[tuple[str, str]
 def _get_tuple_column_names_multindex(column_name: str) -> tuple[str, str]:
     indexes = column_name.split("_")
     return indexes[1], indexes[0]
-
-
-def _get_df_from_file(file_path_name: str, environment: str) -> Df:
-    return pd.read_csv(
-        file_path_name,
-        index_col="name",
-        parse_dates=["date"],
-    ).add_suffix(f"_{environment}")
-
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
     condition_pro_copied_wrong_in_live = (
