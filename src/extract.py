@@ -40,7 +40,6 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
     s3_client = session.client('s3')
     query_prefix = s3_query.prefix if s3_query.prefix.endswith("/") else f"{s3_query.prefix}/"
     _raise_exception_if_subfolders_in_s3(s3_client, s3_query.bucket, query_prefix)
-    response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=query_prefix, Delimiter="/")
     # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
     operation_parameters = {'Bucket': s3_query.bucket, 'Prefix': query_prefix}
     paginator = s3_client.get_paginator('list_objects_v2')
