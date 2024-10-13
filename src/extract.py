@@ -38,17 +38,9 @@ def _get_s3_queries() -> list[S3Query]:
 def _get_s3_data(s3_query: S3Query) -> S3Data:
     session = boto3.Session()
     s3_client = session.client('s3')
-    # https://stackoverflow.com/questions/71577584/python-boto3-s3-list-only-current-directory-file-ignoring-subdirectory-files
-    response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=s3_query.prefix+"/", Delimiter="/")
-    if len(response["CommonPrefixes"]) > 0:
-        folder_path_names = [
-            common_prefix["Prefix"]
-            for common_prefix in response["CommonPrefixes"]
-        ]
-        error_text = (
-            f"Subfolders detected in bucket {s3_query.bucket}. This script cannot manage subfolders"
-            f". Subfolders ({len(folder_path_names)}): {', '.join(folder_path_names)}")
-        raise ValueError(error_text)
+    query_prefix = s3_query.prefix if s3_query.prefix.endswith("/") else f"{s3_query.prefix}/"
+    _raise_exception_if_subfolders_in_s3(s3_client, s3_query.bucket, query_prefix)
+    response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=query_prefix, Delimiter="/")
     if response["IsTruncated"] is True:
         folder_path = PurePath(s3_query.bucket, s3_query.prefix)
         raise ValueError(f"More files that the maximum allowed in {folder_path}. This script cannot manage all the files")
@@ -60,6 +52,20 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
             }
         for content in response['Contents']
     ]
+
+def _raise_exception_if_subfolders_in_s3(s3_client, bucket: str, query_prefix: str):
+    # https://stackoverflow.com/questions/71577584/python-boto3-s3-list-only-current-directory-file-ignoring-subdirectory-files
+    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=query_prefix, Delimiter="/")
+    if len(response.get("CommonPrefixes", [])) == 0:
+        return
+    folder_path_names = [
+        common_prefix["Prefix"]
+        for common_prefix in response["CommonPrefixes"]
+    ]
+    error_text = (
+        f"Subfolders detected in bucket {bucket}. This script cannot manage subfolders"
+        f". Subfolders ({len(folder_path_names)}): {', '.join(folder_path_names)}")
+    raise ValueError(error_text)
 
 def _get_file_name_from_response_key(content: dict) -> str:
     return content["Key"].split("/")[-1]
