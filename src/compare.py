@@ -30,10 +30,14 @@ def _get_df_combine_files() -> Df:
         result = result.join(account_df, how='outer')
 
     print(result)
-    result.to_csv('/tmp/foo.csv')
+    result.to_csv('/tmp/no_multi.csv')
+    result.columns = pd.MultiIndex.from_tuples(_get_column_names_mult_index(result.columns))
+    print(result)
     breakpoint()
-
-    #result.columns = pd.MultiIndex.from_tuples(_get_column_names_multindex(result))
+    result.index = pd.MultiIndex.from_tuples(_get_index_multi_index(result.index))
+    print(result)
+    breakpoint()
+    result.to_csv('/tmp/multi.csv')
     return result
 
 def _get_df_combine_files_for_aws_account(aws_account: str, buckets_and_files: dict) -> Df:
@@ -43,7 +47,7 @@ def _get_df_combine_files_for_aws_account(aws_account: str, buckets_and_files: d
             file_path_name = PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, aws_account, bucket_name, file_name)
             file_df = _get_df_from_file(file_path_name)
             file_df = file_df.add_prefix(f"{aws_account}_value_")
-            file_df = file_df.set_index(f"{bucket_name}_file" + file_df.index.astype(str))
+            file_df = file_df.set_index(f"{bucket_name}_file_" + file_df.index.astype(str))
             result = pd.concat([result, file_df])
     return result
 
@@ -85,15 +89,24 @@ def _get_df_from_file(file_path_name: PurePath) -> Df:
     return result
 
 
-def _get_column_names_multindex(column_names: list[str]) -> list[tuple[str, str]]:
+def _get_column_names_mult_index(column_names: list[str]) -> list[tuple[str, str]]:
     return [
-        _get_tuple_column_names_multindex(column_name)
+        _get_tuple_column_names_multi_index(column_name)
         for column_name in column_names
     ]
 
-def _get_tuple_column_names_multindex(column_name: str) -> tuple[str, str]:
-    indexes = column_name.split("_")
-    return indexes[1], indexes[0]
+
+def _get_tuple_column_names_multi_index(column_name: str) -> tuple[str, str]:
+    aws_account, file_value = column_name.split("_value_")
+    return aws_account, file_value
+
+
+def _get_index_multi_index(indexes: list[str]) -> list[tuple[str, str]]:
+    return [_get_tuple_index_multi_index(index) for index in indexes]
+
+def _get_tuple_index_multi_index(index: str) -> tuple[str, str]:
+    bucket_name, file_name = index.split("_file_")
+    return bucket_name, file_name
 
 def _get_df_analyze_s3_data(df: Df) -> Df:
     condition_pro_copied_wrong_in_live = (
