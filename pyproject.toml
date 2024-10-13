@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "aws-s3-compare-paths"
+version = "0.1.0"
+description = "Compare S3 files between different AWS accounts"
+authors = ["CarlosAMolina <15368012+CarlosAMolina@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
