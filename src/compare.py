@@ -5,15 +5,11 @@ import pandas as pd
 from pandas import DataFrame as Df
 
 
-from constants import MAIN_FOLDER_NAME_EXPORTS
+from constants import MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS
+from constants import AWS_ACCOUNT_WITH_DATA_TO_SYNC
 
 
 FilePathNamesToCompare = tuple[str, str, str]
-
-config = {
-    "file_name": "file.csv", 
-    "folder_names_with_files": ["pro", "live", "work"],
-}
 
 
 def run():
@@ -27,31 +23,66 @@ def _run_file_name():
 
 
 def _get_df_combine_files() -> Df:
-    result = pd.DataFrame()
-    buckets_and_exported_files = _get_buckets_and_exported_files()
-    for bucket_name, file_names in buckets_and_exported_files.items():
-        for file_name in file_names:
-            file_path_name = f"exports/{bucket_name}/{file_name}"
-            file_df = _get_df_from_file(file_path_name, folder_name)
-            result = result.join(file_df, how='outer')
-    result.columns = pd.MultiIndex.from_tuples(_get_column_names_multindex(result))
+    result = Df()
+    buckets_and_files: dict = _get_buckets_and_exported_files()
+    for aws_account in _get_aws_accounts():
+        account_df = _get_df_combine_files_for_aws_account(aws_account, buckets_and_files)
+        result = result.join(account_df, how='outer')
+
+    print(result)
+    result.to_csv('/tmp/foo.csv')
+    breakpoint()
+
+    #result.columns = pd.MultiIndex.from_tuples(_get_column_names_multindex(result))
     return result
+
+def _get_df_combine_files_for_aws_account(aws_account: str, buckets_and_files: dict) -> Df:
+    result = Df()
+    for bucket_name, file_names in buckets_and_files.items():
+        for file_name in file_names:
+            file_path_name = PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, aws_account, bucket_name, file_name)
+            file_df = _get_df_from_file(file_path_name)
+            file_df = file_df.add_prefix(f"{aws_account}_value_")
+            file_df = file_df.set_index(f"{bucket_name}_file" + file_df.index.astype(str))
+            result = pd.concat([result, file_df])
+    return result
+
 
 def _get_buckets_and_exported_files() -> dict[str, list[str]]:
-    bucket_names = os.listdir(MAIN_FOLDER_NAME_EXPORTS)
+    bucket_names = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, AWS_ACCOUNT_WITH_DATA_TO_SYNC))
+    bucket_names.sort()
+    accounts = _get_aws_accounts()
+    accounts.remove(AWS_ACCOUNT_WITH_DATA_TO_SYNC)
+    accounts.sort()
+    for account in accounts:
+        buckets_in_account = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, account))
+        buckets_in_account.sort()
+        if bucket_names != buckets_in_account:
+            raise ValueError("The S3 data has not been exported correctly. Error comparing buckets in account '{account}'")
     result = {}
-    for bucket_name in bucket_names:
-        directory_path = PurePath(MAIN_FOLDER_NAME_EXPORTS, bucket_name) 
-        file_names = os.listdir(directory_path)
-        result[bucket_name] = file_names
+    for bucket in bucket_names:
+        file_names = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, AWS_ACCOUNT_WITH_DATA_TO_SYNC, bucket))
+        file_names.sort()
+        for account in accounts:
+            files_for_bucket_in_account = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, account, bucket))
+            files_for_bucket_in_account.sort()
+            if file_names != files_for_bucket_in_account:
+                raise ValueError(f"The S3 data has not been exported correctly. Error comparing files in account '{account}' and bucket '{bucket}'")
+        result[bucket] = file_names
     return result
 
-def _get_df_from_file(file_path_name: str, environment: str) -> Df:
-    return pd.read_csv(
+
+def _get_aws_accounts() -> list[str]:
+    return os.listdir(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS)
+
+
+def _get_df_from_file(file_path_name: PurePath) -> Df:
+    result = pd.read_csv(
         file_path_name,
         index_col="name",
         parse_dates=["date"],
-    ).add_suffix(f"_{environment}")
+    )
+    return result
 
 
 def _get_column_names_multindex(column_names: list[str]) -> list[tuple[str, str]]:
