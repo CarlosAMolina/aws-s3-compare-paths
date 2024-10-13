@@ -22,3 +22,4 @@ def _get_bucket_and_path_from_s3_uri(s3_uri: str) -> tuple[str, str]:
 
 
 export_config = _get_export_config()
+AWS_ACCOUNT_WITH_DATA_TO_SYNC = "aws_account_1"

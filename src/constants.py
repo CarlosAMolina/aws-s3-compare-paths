@@ -1,3 +1,2 @@
-AWS_ACCOUNT_WITH_DATA_TO_SYNC = "aws_account_1"
 MAIN_FOLDER_NAME_EXPORTS = "exports"
 MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS = "exports-all-aws-accounts"
