@@ -41,17 +41,22 @@ def _get_s3_data(s3_query: S3Query) -> S3Data:
     query_prefix = s3_query.prefix if s3_query.prefix.endswith("/") else f"{s3_query.prefix}/"
     _raise_exception_if_subfolders_in_s3(s3_client, s3_query.bucket, query_prefix)
     response = s3_client.list_objects_v2(Bucket=s3_query.bucket, Prefix=query_prefix, Delimiter="/")
-    if response["IsTruncated"] is True:
-        folder_path = PurePath(s3_query.bucket, s3_query.prefix)
-        raise ValueError(f"More files that the maximum allowed in {folder_path}. This script cannot manage all the files")
-    return [
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
+    operation_parameters = {'Bucket': s3_query.bucket, 'Prefix': query_prefix}
+    paginator = s3_client.get_paginator('list_objects_v2')
+    page_iterator = paginator.paginate(**operation_parameters)
+    result = []
+    for page in page_iterator:
+        page_files = [
             {
                 "name": _get_file_name_from_response_key(content),
                 "date": content["LastModified"],
                 "size": content["Size"],
             }
-        for content in response['Contents']
-    ]
+            for content in page['Contents']
+        ]
+        result += page_files
+    return result
 
 def _raise_exception_if_subfolders_in_s3(s3_client, bucket: str, query_prefix: str):
     # https://stackoverflow.com/questions/71577584/python-boto3-s3-list-only-current-directory-file-ignoring-subdirectory-files
