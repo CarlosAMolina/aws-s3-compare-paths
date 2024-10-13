@@ -23,16 +23,21 @@ def run():
     if os.path.isdir(MAIN_FOLDER_NAME_EXPORTS):
         raise FileExistsError(f"The folder '{MAIN_FOLDER_NAME_EXPORTS}' exists, drop it before continue")
     for bucket_name in config.keys():
-        exported_files_directory_path = PurePath(MAIN_FOLDER_NAME_EXPORTS, bucket_name)
+        exported_files_directory_path = _get_path_for_bucket_exported_files(bucket_name)
         print("Creating folder for bucket results: ", exported_files_directory_path)
         os.makedirs(exported_files_directory_path)
     s3_queries = _get_s3_queries()
     for query_index, s3_query in enumerate(s3_queries, 1):
         print(f"Working with query {query_index}/{len(s3_queries)}: {s3_query}")
         s3_data = _get_s3_data(s3_query)
+        exported_files_directory_path = _get_path_for_bucket_exported_files(s3_query.bucket)
         file_path = _get_results_exported_file_path(exported_files_directory_path, s3_query.prefix)
         _export_data_to_csv(s3_data, file_path)
         print(f"Extraction done")
+
+
+def _get_path_for_bucket_exported_files(bucket_name: str) -> PurePath:
+    return PurePath(MAIN_FOLDER_NAME_EXPORTS, bucket_name)
 
 
 def _get_s3_queries() -> list[S3Query]:
