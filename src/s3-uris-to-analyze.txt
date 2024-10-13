@@ -1,0 +1,3 @@
+s3://pets/dogs/bit
+s3://pets/cats/europe/
+s3://cars/4x4/

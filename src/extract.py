@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 def run():
     if os.path.isdir(MAIN_FOLDER_NAME_EXPORTS):
         raise FileExistsError(f"The folder '{MAIN_FOLDER_NAME_EXPORTS}' exists, drop it before continue")
-    exported_files_directory_path = PurePath(MAIN_FOLDER_NAME_EXPORTS, config["bucket"])
-    print("Creating folder", exported_files_directory_path)
-    os.makedirs(exported_files_directory_path)
+    for bucket_name in config.keys():
+        exported_files_directory_path = PurePath(MAIN_FOLDER_NAME_EXPORTS, bucket_name)
+        print("Creating folder for bucket results: ", exported_files_directory_path)
+        os.makedirs(exported_files_directory_path)
     s3_queries = _get_s3_queries()
     for query_index, s3_query in enumerate(s3_queries, 1):
         print(f"Working with query {query_index}/{len(s3_queries)}: {s3_query}")
@@ -35,10 +36,9 @@ def run():
 
 
 def _get_s3_queries() -> list[S3Query]:
-    bucket = config["bucket"]
-    path_names = config["paths"]
     return [
         S3Query(bucket, path_name)
+        for bucket, path_names in config.items()
         for path_name in path_names
     ]
 

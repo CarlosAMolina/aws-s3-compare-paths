@@ -1,6 +1,3 @@
-## Configuration
+## Run
 
-Modify the `what-to-analyze.txt` file:
-
-- First line: bucket name.
-- Other lines: s3 paths.
+Update the `s3-uris-to-analyze.txt` file with your data.
