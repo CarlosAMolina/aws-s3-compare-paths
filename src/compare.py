@@ -59,7 +59,7 @@ def _get_buckets_and_exported_files() -> dict[str, list[str]]:
         buckets_in_account = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, account))
         buckets_in_account.sort()
         if bucket_names != buckets_in_account:
-            raise ValueError("The S3 data has not been exported correctly. Error comparing buckets in account '{account}'")
+            raise ValueError(f"The S3 data has not been exported correctly. Error comparing buckets in account '{account}'")
     result = {}
     for bucket in bucket_names:
         file_names = os.listdir(PurePath(MAIN_FOLDER_NAME_EXPORTS_ALL_AWS_ACCOUNTS, AWS_ACCOUNT_WITH_DATA_TO_SYNC, bucket))
